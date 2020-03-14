@@ -1,5 +1,6 @@
 from django.db import models
 from patient.models import Patient
+from django.utils import timezone
 
 class doctorDetails(models.Model):
     full_name = models.CharField(max_length=50)
@@ -17,6 +18,7 @@ class doctorDetails(models.Model):
         return self.full_name
 
 class doctorSlots(models.Model):
+    slot_date = models.DateField(default=timezone.now())
     slot_start_time = models.TimeField()
     slot_end_time = models.TimeField()
 

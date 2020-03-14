@@ -32,7 +32,7 @@ class AddPatient(APIView):
             pat.save()
             return Response({"message":"success"})
         except:
-            return Response({"message":"failure"})
+            return Response({"message":"failure"},status=403)
 
     def get(self,request):
         pat = Patient.objects.all()
@@ -48,7 +48,7 @@ class request_appointment(APIView):
             print('reached here cp-1')
             if check  :
                 print('reached here cp0')
-                return Response({"message":"Requested already"})
+                return Response({"message":"Requested already"},status=403)
             else:
                 print('reached here cp1')
                 make_request = Appointments()
@@ -63,7 +63,7 @@ class request_appointment(APIView):
                 print('reached here cp6')
                 return Response({"message":"success"})
         except Exception as e:
-            return Response({"message":" "+str(e)},content_type='application/json')
+            return Response({"message":" "+str(e)},content_type='application/json',status=403)
 
 class get_patient_appointment_history(APIView):
     def get(self,request,pk):
@@ -75,7 +75,18 @@ class get_patient_appointment_history(APIView):
             print(apps.is_booked)
             if apps.patient_id == pk and apps.is_booked == True :
                 resp.append({
+                    "date" : (doctorSlots.objects.get(id=apps.slot_id)).slot_date,
                     "start_time" : (doctorSlots.objects.get(id=apps.slot_id)).slot_start_time,
                     "end_time" : (doctorSlots.objects.get(id=apps.slot_id)).slot_end_time,
                 })
         return Response(resp)
+
+class get_unbooked_slots(APIView):
+    def get(self,request):
+        if not (Appointments.objects.all().filter(is_booked=True)) :
+            unbooked_slots = doctorSlots.objects.all()
+        else:
+            unbooked_slots=[]
+            for slots in Appointments.objects.all().filter(is_booked=False):
+                unbooked_slots.append(doctorSlots.objects.get(slot_id=slots.id))
+        return Response(unbooked_slots.values())
