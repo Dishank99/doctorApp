@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import HttpResponse
 from .models import Patient
+from doctor.models import doctorSlots,Appointments
 from rest_framework import serializers
 from .serializer import PatientSerializer
 
@@ -29,10 +30,63 @@ class AddPatient(APIView):
             pat.contact_no = request.data.get('contact_no')
             pat.contact_emailid = request.data.get('contact_emailid')
             pat.save()
-            return Response({"sucess":"sucess"})
+            return Response({"message":"success"})
         except:
-            return Response({"failure":"failure"})
+            return Response({"message":"failure"},status=403)
 
     def get(self,request):
         pat = Patient.objects.all()
         return Response(pat.values())
+
+class request_appointment(APIView):
+    def post(self,request,pk):
+        try:
+            pat_id = request.data.get('patient_id')
+            slot_id = pk
+            print('reached here cp-2')
+            check = Appointments.objects.filter(patient_id=pat_id)
+            print('reached here cp-1')
+            if check  :
+                print('reached here cp0')
+                return Response({"message":"Requested already"},status=403)
+            else:
+                print('reached here cp1')
+                make_request = Appointments()
+                print('reached here cp2')
+                make_request.patient=(Patient.objects.get(id=pat_id))
+                print('reached here cp3')
+                make_request.slot=(doctorSlots.objects.get(id=pk))
+                print('reached here cp4')
+                make_request.is_requested=True
+                print('reached here cp5')
+                make_request.save()
+                print('reached here cp6')
+                return Response({"message":"success"})
+        except Exception as e:
+            return Response({"message":" "+str(e)},content_type='application/json',status=403)
+
+class get_patient_appointment_history(APIView):
+    def get(self,request,pk):
+        #apps = Appointments.objects.all()
+        resp = []
+        for apps in Appointments.objects.all():
+            print('cp1')
+            print(apps.patient_id)
+            print(apps.is_booked)
+            if apps.patient_id == pk and apps.is_booked == True :
+                resp.append({
+                    "date" : (doctorSlots.objects.get(id=apps.slot_id)).slot_date,
+                    "start_time" : (doctorSlots.objects.get(id=apps.slot_id)).slot_start_time,
+                    "end_time" : (doctorSlots.objects.get(id=apps.slot_id)).slot_end_time,
+                })
+        return Response(resp)
+
+class get_unbooked_slots(APIView):
+    def get(self,request):
+        if not (Appointments.objects.all().filter(is_booked=True)) :
+            unbooked_slots = doctorSlots.objects.all()
+        else:
+            unbooked_slots=[]
+            for slots in Appointments.objects.all().filter(is_booked=False):
+                unbooked_slots.append(doctorSlots.objects.get(slot_id=slots.id))
+        return Response(unbooked_slots.values())
